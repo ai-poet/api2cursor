@@ -28,6 +28,8 @@ from adapters.responses_cc_adapter import (
 from config import Config
 from routes.common import (
     RouteContext,
+    apply_body_modifications,
+    apply_header_modifications,
     build_anthropic_target,
     build_openai_target,
     build_responses_target,
@@ -118,6 +120,8 @@ def _handle_openai_backend(ctx: RouteContext, payload: dict[str, Any]):
     )
 
     url, headers = build_openai_target(ctx)
+    payload = apply_body_modifications(payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_openai_stream(ctx, payload, url, headers)
@@ -208,6 +212,8 @@ def _handle_responses_backend(ctx: RouteContext, payload: dict[str, Any]):
     )
 
     url, headers = build_responses_target(ctx)
+    responses_payload = apply_body_modifications(responses_payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_responses_stream(ctx, responses_payload, url, headers)
@@ -285,6 +291,8 @@ def _handle_anthropic_backend(ctx: RouteContext, payload: dict[str, Any]):
     )
 
     url, headers = build_anthropic_target(ctx)
+    anthropic_payload = apply_body_modifications(anthropic_payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_anthropic_stream(ctx, anthropic_payload, url, headers)

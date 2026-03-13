@@ -34,6 +34,8 @@ class RouteContext:
     is_stream: bool
     custom_instructions: str
     instructions_position: str
+    body_modifications: dict
+    header_modifications: dict
 
 
 def build_route_context(client_model: str, is_stream: bool) -> RouteContext:
@@ -48,6 +50,8 @@ def build_route_context(client_model: str, is_stream: bool) -> RouteContext:
         is_stream=is_stream,
         custom_instructions=mapping.get('custom_instructions', ''),
         instructions_position=mapping.get('instructions_position', 'prepend'),
+        body_modifications=mapping.get('body_modifications', {}),
+        header_modifications=mapping.get('header_modifications', {}),
     )
 
 
@@ -193,3 +197,38 @@ def inject_instructions_anthropic(payload: dict[str, Any], instructions: str, po
 
     logger.info('已注入自定义指令到 Anthropic system (%d 字符, %s)', len(instructions), position)
     return payload
+
+
+# ─── Body / Header 修改 ──────────────────────────
+
+
+def apply_body_modifications(payload: dict[str, Any], modifications: dict[str, Any]) -> dict[str, Any]:
+    """对转发请求体应用字段级修改。
+
+    规则与 CursorProxy 一致：值为 null 的字段会被删除，其余字段设置/覆盖。
+    """
+    if not modifications:
+        return payload
+    for key, value in modifications.items():
+        if value is None:
+            payload.pop(key, None)
+        else:
+            payload[key] = value
+    logger.info('已应用 body_modifications: %s', list(modifications.keys()))
+    return payload
+
+
+def apply_header_modifications(headers: dict[str, str], modifications: dict[str, Any]) -> dict[str, str]:
+    """对转发请求头应用字段级修改。
+
+    规则同 body：值为 null 删除，其余设置/覆盖。
+    """
+    if not modifications:
+        return headers
+    for key, value in modifications.items():
+        if value is None:
+            headers.pop(key, None)
+        else:
+            headers[key] = str(value)
+    logger.info('已应用 header_modifications: %s', list(modifications.keys()))
+    return headers

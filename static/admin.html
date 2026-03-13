@@ -133,6 +133,22 @@
       </div>
       <div class="hint">前置：自定义指令放在系统提示词最前面，模型优先看到；后置：放在末尾</div>
     </div>
+    <div class="field">
+      <label>Body 修改 <span style="color:var(--muted)">（可选，JSON 格式）</span></label>
+      <div class="input-wrap"><textarea id="mBodyMods" rows="3" placeholder='例: {"reasoning_effort": "high", "stream_options": null}' style="resize:vertical;min-height:60px;font-family:Consolas,Monaco,monospace;font-size:13px"></textarea></div>
+      <div class="hint">
+        对转发到上游的请求体做字段级增删改。值为 <code>null</code> 表示删除该字段，其余为设置/覆盖。<br>
+        适用场景：注入 <code>reasoning_effort</code>、删除上游不支持的 <code>stream_options</code> 等。
+      </div>
+    </div>
+    <div class="field">
+      <label>Header 修改 <span style="color:var(--muted)">（可选，JSON 格式）</span></label>
+      <div class="input-wrap"><textarea id="mHeaderMods" rows="3" placeholder='例: {"X-Custom-Header": "value", "X-Unwanted": null}' style="resize:vertical;min-height:60px;font-family:Consolas,Monaco,monospace;font-size:13px"></textarea></div>
+      <div class="hint">
+        对转发到上游的请求头做增删改，规则同 Body 修改。<br>
+        适用场景：按模型设置不同的 <code>Authorization</code>、API 版本头等。
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" id="modalSaveBtn" onclick="saveMapping()">保存</button>

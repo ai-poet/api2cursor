@@ -138,6 +138,8 @@ async function loadMappings() {
         : backend;
     const hasOverride = m.target_url || m.api_key;
     const hasInstructions = !!m.custom_instructions;
+    const hasBodyMods = m.body_modifications && Object.keys(m.body_modifications).length > 0;
+    const hasHeaderMods = m.header_modifications && Object.keys(m.header_modifications).length > 0;
     return `<div class="mapping-item">
       <div class="mapping-top">
         <span class="mapping-name">${esc(name)}</span>
@@ -147,6 +149,8 @@ async function loadMappings() {
           <span class="tag ${tagClass}">${tagLabel}</span>
           ${hasOverride ? '<span class="tag tag-override">自定义地址</span>' : ''}
           ${hasInstructions ? '<span class="tag tag-instructions">自定义指令</span>' : ''}
+          ${hasBodyMods ? '<span class="tag tag-mods">Body修改</span>' : ''}
+          ${hasHeaderMods ? '<span class="tag tag-mods">Header修改</span>' : ''}
         </div>
         <div class="mapping-actions">
           <button class="btn btn-ghost btn-sm" onclick="openEditModal('${esc(name)}')">编辑</button>
@@ -171,6 +175,8 @@ function openAddModal() {
   document.getElementById('mKey').value = '';
   document.getElementById('mInstructions').value = '';
   document.getElementById('mInsPosition').value = 'prepend';
+  document.getElementById('mBodyMods').value = '';
+  document.getElementById('mHeaderMods').value = '';
   document.getElementById('modal').classList.add('active');
 }
 
@@ -189,6 +195,8 @@ async function openEditModal(name) {
     document.getElementById('mKey').value = m.api_key || '';
     document.getElementById('mInstructions').value = m.custom_instructions || '';
     document.getElementById('mInsPosition').value = m.instructions_position || 'prepend';
+    document.getElementById('mBodyMods').value = m.body_modifications && Object.keys(m.body_modifications).length ? JSON.stringify(m.body_modifications, null, 2) : '';
+    document.getElementById('mHeaderMods').value = m.header_modifications && Object.keys(m.header_modifications).length ? JSON.stringify(m.header_modifications, null, 2) : '';
     document.getElementById('modal').classList.add('active');
   } catch (e) {
     toast('错误: ' + e.message, false);
@@ -206,6 +214,20 @@ async function saveMapping() {
   if (!name) { toast('请填写 Cursor 模型名', false); return; }
   if (!upstream) { toast('请填写上游模型名', false); return; }
 
+  let bodyMods = {};
+  const bodyModsStr = document.getElementById('mBodyMods').value.trim();
+  if (bodyModsStr) {
+    try { bodyMods = JSON.parse(bodyModsStr); }
+    catch { toast('Body 修改不是有效的 JSON', false); return; }
+  }
+
+  let headerMods = {};
+  const headerModsStr = document.getElementById('mHeaderMods').value.trim();
+  if (headerModsStr) {
+    try { headerMods = JSON.parse(headerModsStr); }
+    catch { toast('Header 修改不是有效的 JSON', false); return; }
+  }
+
   const payload = {
     name,
     upstream_model: upstream,
@@ -214,6 +236,8 @@ async function saveMapping() {
     api_key: document.getElementById('mKey').value.trim(),
     custom_instructions: document.getElementById('mInstructions').value,
     instructions_position: document.getElementById('mInsPosition').value,
+    body_modifications: bodyMods,
+    header_modifications: headerMods,
   };
 
   try {

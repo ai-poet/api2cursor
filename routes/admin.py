@@ -137,6 +137,8 @@ def add_mapping():
         'api_key': data.get('api_key', ''),
         'custom_instructions': data.get('custom_instructions', ''),
         'instructions_position': data.get('instructions_position', 'prepend'),
+        'body_modifications': data.get('body_modifications') or {},
+        'header_modifications': data.get('header_modifications') or {},
     }
     return _save_and_respond(s, f'映射已添加: {name}')
 
@@ -161,6 +163,8 @@ def update_mapping(name):
         'api_key': data.get('api_key', ''),
         'custom_instructions': data.get('custom_instructions', ''),
         'instructions_position': data.get('instructions_position', 'prepend'),
+        'body_modifications': data.get('body_modifications') or {},
+        'header_modifications': data.get('header_modifications') or {},
     }
     if new_name != name:
         del mappings[name]

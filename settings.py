@@ -95,6 +95,8 @@ def resolve_model(model_name):
             'api_key': m.get('api_key') or base_key,
             'custom_instructions': m.get('custom_instructions') or '',
             'instructions_position': m.get('instructions_position') or 'prepend',
+            'body_modifications': m.get('body_modifications') or {},
+            'header_modifications': m.get('header_modifications') or {},
         }
 
     return {
@@ -104,6 +106,8 @@ def resolve_model(model_name):
         'api_key': base_key,
         'custom_instructions': '',
         'instructions_position': 'prepend',
+        'body_modifications': {},
+        'header_modifications': {},
     }
 
 

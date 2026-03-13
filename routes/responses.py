@@ -18,6 +18,8 @@ from adapters.responses_cc_adapter import ResponsesStreamConverter, cc_to_respon
 from config import Config
 from routes.common import (
     RouteContext,
+    apply_body_modifications,
+    apply_header_modifications,
     build_anthropic_target,
     build_openai_target,
     build_responses_target,
@@ -93,6 +95,8 @@ def _handle_openai_backend(ctx: RouteContext, cc_payload: dict[str, Any]):
     )
 
     url, headers = build_openai_target(ctx)
+    cc_payload = apply_body_modifications(cc_payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_openai_stream(ctx, cc_payload, url, headers)
@@ -177,6 +181,8 @@ def _handle_responses_backend(ctx: RouteContext, payload: dict[str, Any]):
     payload['model'] = ctx.upstream_model
     payload = inject_instructions_responses(payload, ctx.custom_instructions, ctx.instructions_position)
     url, headers = build_responses_target(ctx)
+    payload = apply_body_modifications(payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_responses_stream(ctx, payload, url, headers)
@@ -241,6 +247,8 @@ def _handle_anthropic_backend(ctx: RouteContext, cc_payload: dict[str, Any]):
     )
 
     url, headers = build_anthropic_target(ctx)
+    anthropic_payload = apply_body_modifications(anthropic_payload, ctx.body_modifications)
+    headers = apply_header_modifications(headers, ctx.header_modifications)
 
     if ctx.is_stream:
         return _handle_anthropic_stream(ctx, anthropic_payload, url, headers)
