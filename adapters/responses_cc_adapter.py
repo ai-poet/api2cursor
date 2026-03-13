@@ -543,14 +543,17 @@ class ResponsesStreamConverter:
     def _rewrite_top_level_model(self, payload: JsonDict) -> JsonDict:
         """在保持上游事件结构不变的前提下回填展示模型名。
 
-        Responses 原生事件经常会在顶层带一个 `model` 字段；这里不重写内部结构，只把这个
-        顶层字段替换为当前映射的 Cursor 模型名，避免界面显示上游原始模型名。
+        原生 Responses 事件中 model 可能在顶层或嵌套在 response 子对象中，
+        两处都需要改写，避免界面显示上游原始模型名。
         """
         if not isinstance(payload, dict):
             return payload
         copied = dict(payload)
         if copied.get('model'):
             copied['model'] = self.model or copied['model']
+        if isinstance(copied.get('response'), dict) and copied['response'].get('model'):
+            copied['response'] = dict(copied['response'])
+            copied['response']['model'] = self.model or copied['response']['model']
         return copied
 
 
@@ -597,12 +600,13 @@ class ResponsesToCCStreamConverter:
     def _handle_output_item_added(self, event_data: JsonDict) -> list[JsonDict]:
         """处理 Responses 的 output_item.added 事件。
 
-        这里主要关心 function_call，因为文本和 reasoning 的真正内容会分别在后续 delta
-        事件里补全；function_call 则需要先创建一个空参数的 tool_call 槽位。
+        上游事件结构为 {type, item: {type, call_id, name, ...}, output_index}，
+        实际的 function_call 信息在 item 子对象中。
         """
-        if event_data.get('type') != 'function_call':
+        item = event_data.get('item') or event_data
+        if item.get('type') != 'function_call':
             return []
-        call_id = event_data.get('call_id') or gen_id('call_')
+        call_id = item.get('call_id') or gen_id('call_')
         index = self._tool_slots.setdefault(call_id, self._tool_index)
         if index == self._tool_index:
             self._tool_index += 1
@@ -612,7 +616,7 @@ class ResponsesToCCStreamConverter:
                 'id': call_id,
                 'type': 'function',
                 'function': {
-                    'name': event_data.get('name', ''),
+                    'name': item.get('name', ''),
                     'arguments': '',
                 },
             }]
@@ -633,11 +637,16 @@ class ResponsesToCCStreamConverter:
         })]
 
     def _handle_completed(self, event_data: JsonDict) -> list[JsonDict]:
-        """处理 response.completed，补出聊天补全流的最终收尾 chunk。"""
-        self._usage = event_data.get('usage', {}) or {}
+        """处理 response.completed，补出聊天补全流的最终收尾 chunk。
+
+        上游事件结构为 {type, response: {output, usage, ...}}，
+        实际的 output/usage 在 response 子对象中。
+        """
+        resp = event_data.get('response') or event_data
+        self._usage = resp.get('usage', {}) or {}
         finish_reason = 'tool_calls' if any(
             isinstance(item, dict) and item.get('type') == 'function_call'
-            for item in event_data.get('output', [])
+            for item in resp.get('output', [])
         ) else 'stop'
         chunk = self._make_chunk(delta={}, finish_reason=finish_reason)
         chunk['usage'] = {
@@ -718,7 +727,7 @@ def _append_responses_input_item(
     item: JsonDict = {
         'type': 'message',
         'role': role or 'user',
-        'content': _content_to_responses_parts(content),
+        'content': _content_to_responses_parts(content, role),
     }
     input_items.append(item)
 
@@ -1013,13 +1022,19 @@ def _content_to_text(content: Any) -> str:
     return str(content) if content is not None else ''
 
 
-def _content_to_responses_parts(content: Any) -> list[JsonDict]:
-    """将普通消息内容转换为 Responses `input_text` 数组。"""
+def _content_to_responses_parts(content: Any, role: str = 'user') -> list[JsonDict]:
+    """将普通消息内容转换为 Responses 内容块数组。
+
+    assistant 消息使用 output_text，其他角色使用 input_text。
+    """
     if isinstance(content, list):
         text = _extract_text(content)
     else:
         text = _content_to_text(content)
-    return [{'type': 'input_text', 'text': text}] if text else []
+    if not text:
+        return []
+    part_type = 'output_text' if role == 'assistant' else 'input_text'
+    return [{'type': part_type, 'text': text}]
 
 
 def _stringify_output(content: Any) -> str:

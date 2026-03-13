@@ -33,6 +33,9 @@ from routes.common import (
     build_responses_target,
     build_route_context,
     chat_error_chunk,
+    inject_instructions_anthropic,
+    inject_instructions_cc,
+    inject_instructions_responses,
     log_route_context,
     log_usage,
     sse_data_message,
@@ -108,6 +111,7 @@ def _handle_openai_backend(ctx: RouteContext, payload: dict[str, Any]):
     )
 
     payload = normalize_request(payload, ctx.upstream_model)
+    payload = inject_instructions_cc(payload, ctx.custom_instructions, ctx.instructions_position)
     _dbg(
         f'标准化完成：模型={payload.get("model")} '
         f'工具数={len(payload.get("tools", []))}'
@@ -194,6 +198,7 @@ def _handle_responses_backend(ctx: RouteContext, payload: dict[str, Any]):
     """
     responses_payload = cc_to_responses_request(payload)
     responses_payload['model'] = ctx.upstream_model
+    responses_payload = inject_instructions_responses(responses_payload, ctx.custom_instructions, ctx.instructions_position)
     _dbg(
         '已转换为 Responses 请求：字段=' + str(list(responses_payload.keys()))
         + f' 输入项数={len(responses_payload.get("input", []))}'
@@ -270,6 +275,7 @@ def _handle_anthropic_backend(ctx: RouteContext, payload: dict[str, Any]):
     """处理走 Anthropic Messages 后端的聊天补全请求。"""
     payload['model'] = ctx.upstream_model
     anthropic_payload = cc_to_messages_request(payload)
+    anthropic_payload = inject_instructions_anthropic(anthropic_payload, ctx.custom_instructions, ctx.instructions_position)
     _dbg(
         '已转换为 Messages 请求：字段=' + str(list(anthropic_payload.keys()))
         + f' 消息数={len(anthropic_payload.get("messages", []))}'

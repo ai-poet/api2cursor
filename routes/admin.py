@@ -135,6 +135,8 @@ def add_mapping():
         'backend': data.get('backend', 'auto'),
         'target_url': data.get('target_url', ''),
         'api_key': data.get('api_key', ''),
+        'custom_instructions': data.get('custom_instructions', ''),
+        'instructions_position': data.get('instructions_position', 'prepend'),
     }
     return _save_and_respond(s, f'映射已添加: {name}')
 
@@ -157,6 +159,8 @@ def update_mapping(name):
         'backend': data.get('backend', 'auto'),
         'target_url': data.get('target_url', ''),
         'api_key': data.get('api_key', ''),
+        'custom_instructions': data.get('custom_instructions', ''),
+        'instructions_position': data.get('instructions_position', 'prepend'),
     }
     if new_name != name:
         del mappings[name]

@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify
 
 import settings
 from config import Config
+from routes.common import inject_instructions_anthropic
 from utils.http import build_anthropic_headers, forward_request, sse_response
 
 logger = logging.getLogger(__name__)
@@ -29,10 +30,15 @@ def messages_passthrough():
 
     logger.info(f'[透传] model={model} 流式={is_stream}')
 
-    url_base = settings.get_url()
-    api_key = settings.get_key()
+    mapping = settings.resolve_model(model)
+    url_base = mapping['target_url']
+    api_key = mapping['api_key']
+    custom_instructions = mapping.get('custom_instructions', '')
+    instructions_position = mapping.get('instructions_position', 'prepend')
     headers = build_anthropic_headers(api_key)
     url = f'{url_base.rstrip("/")}/v1/messages'
+
+    payload = inject_instructions_anthropic(payload, custom_instructions, instructions_position)
 
     if not is_stream:
         resp, err = forward_request(url, headers, payload)

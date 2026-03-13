@@ -137,6 +137,7 @@ async function loadMappings() {
         ? 'responses'
         : backend;
     const hasOverride = m.target_url || m.api_key;
+    const hasInstructions = !!m.custom_instructions;
     return `<div class="mapping-item">
       <div class="mapping-top">
         <span class="mapping-name">${esc(name)}</span>
@@ -145,6 +146,7 @@ async function loadMappings() {
         <div class="mapping-meta">
           <span class="tag ${tagClass}">${tagLabel}</span>
           ${hasOverride ? '<span class="tag tag-override">自定义地址</span>' : ''}
+          ${hasInstructions ? '<span class="tag tag-instructions">自定义指令</span>' : ''}
         </div>
         <div class="mapping-actions">
           <button class="btn btn-ghost btn-sm" onclick="openEditModal('${esc(name)}')">编辑</button>
@@ -167,6 +169,8 @@ function openAddModal() {
   document.getElementById('mBackend').value = 'auto';
   document.getElementById('mUrl').value = '';
   document.getElementById('mKey').value = '';
+  document.getElementById('mInstructions').value = '';
+  document.getElementById('mInsPosition').value = 'prepend';
   document.getElementById('modal').classList.add('active');
 }
 
@@ -183,6 +187,8 @@ async function openEditModal(name) {
     document.getElementById('mBackend').value = m.backend || 'auto';
     document.getElementById('mUrl').value = m.target_url || '';
     document.getElementById('mKey').value = m.api_key || '';
+    document.getElementById('mInstructions').value = m.custom_instructions || '';
+    document.getElementById('mInsPosition').value = m.instructions_position || 'prepend';
     document.getElementById('modal').classList.add('active');
   } catch (e) {
     toast('错误: ' + e.message, false);
@@ -206,6 +212,8 @@ async function saveMapping() {
     backend: document.getElementById('mBackend').value,
     target_url: document.getElementById('mUrl').value.trim(),
     api_key: document.getElementById('mKey').value.trim(),
+    custom_instructions: document.getElementById('mInstructions').value,
+    instructions_position: document.getElementById('mInsPosition').value,
   };
 
   try {

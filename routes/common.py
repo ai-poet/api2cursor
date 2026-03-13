@@ -22,7 +22,8 @@ class RouteContext:
     """数据面路由使用的标准请求上下文。
 
     路由层会先根据客户端模型名解析出统一上下文，后续处理函数只需要关心
-    上游模型、后端类型、目标地址、鉴权信息和流式标记，而不必重复访问配置层。
+    上游模型、后端类型、目标地址、鉴权信息、流式标记和自定义指令，
+    而不必重复访问配置层。
     """
 
     client_model: str
@@ -31,6 +32,8 @@ class RouteContext:
     target_url: str
     api_key: str
     is_stream: bool
+    custom_instructions: str
+    instructions_position: str
 
 
 def build_route_context(client_model: str, is_stream: bool) -> RouteContext:
@@ -43,6 +46,8 @@ def build_route_context(client_model: str, is_stream: bool) -> RouteContext:
         target_url=mapping['target_url'],
         api_key=mapping['api_key'],
         is_stream=is_stream,
+        custom_instructions=mapping.get('custom_instructions', ''),
+        instructions_position=mapping.get('instructions_position', 'prepend'),
     )
 
 
@@ -120,3 +125,71 @@ def chat_error_chunk(message: str, error_type: str = 'upstream_error') -> str:
 def responses_error_event(message: str) -> str:
     """构造 Responses 流式接口使用的错误事件。"""
     return sse_event_message('error', {'error': message})
+
+
+# ─── 自定义指令注入 ──────────────────────────────
+
+
+def _merge_text(custom: str, existing: str, position: str) -> str:
+    """根据 position 决定自定义指令与原有内容的拼接顺序。"""
+    if not existing:
+        return custom
+    if position == 'append':
+        return existing + '\n\n' + custom
+    return custom + '\n\n' + existing
+
+
+def inject_instructions_cc(payload: dict[str, Any], instructions: str, position: str = 'prepend') -> dict[str, Any]:
+    """向 Chat Completions 请求注入自定义指令。
+
+    position='prepend' 时放在 system 消息开头，'append' 时放在末尾。
+    """
+    if not instructions:
+        return payload
+
+    messages = payload.get('messages', [])
+    if messages and messages[0].get('role') == 'system':
+        first = messages[0]
+        original = first.get('content') or ''
+        first['content'] = _merge_text(instructions, original, position)
+    else:
+        messages.insert(0, {'role': 'system', 'content': instructions})
+        payload['messages'] = messages
+
+    logger.info('已注入自定义指令到 CC system 消息 (%d 字符, %s)', len(instructions), position)
+    return payload
+
+
+def inject_instructions_responses(payload: dict[str, Any], instructions: str, position: str = 'prepend') -> dict[str, Any]:
+    """向 Responses 请求注入自定义指令（写入 instructions 字段）。
+
+    position='prepend' 时放在 instructions 开头，'append' 时放在末尾。
+    """
+    if not instructions:
+        return payload
+
+    existing = payload.get('instructions') or ''
+    payload['instructions'] = _merge_text(instructions, existing, position)
+
+    logger.info('已注入自定义指令到 Responses instructions (%d 字符, %s)', len(instructions), position)
+    return payload
+
+
+def inject_instructions_anthropic(payload: dict[str, Any], instructions: str, position: str = 'prepend') -> dict[str, Any]:
+    """向 Anthropic Messages 请求注入自定义指令（写入 system 字段）。
+
+    position='prepend' 时放在 system 开头，'append' 时放在末尾。
+    """
+    if not instructions:
+        return payload
+
+    existing = payload.get('system') or ''
+    if isinstance(existing, list):
+        existing = '\n'.join(
+            block.get('text', '') for block in existing
+            if isinstance(block, dict) and block.get('type') == 'text'
+        )
+    payload['system'] = _merge_text(instructions, existing, position)
+
+    logger.info('已注入自定义指令到 Anthropic system (%d 字符, %s)', len(instructions), position)
+    return payload

@@ -2,7 +2,7 @@
 
 使用 data/settings.json 存储可通过管理面板修改的设置：
   - proxy_target_url / proxy_api_key: 可覆盖环境变量的全局配置
-  - model_mappings: Cursor 模型名 → {upstream_model, backend, target_url, api_key}
+  - model_mappings: Cursor 模型名 → {upstream_model, backend, target_url, api_key, custom_instructions}
 """
 
 import json
@@ -90,6 +90,8 @@ def resolve_model(model_name):
             'backend': backend,
             'target_url': m.get('target_url') or base_url,
             'api_key': m.get('api_key') or base_key,
+            'custom_instructions': m.get('custom_instructions') or '',
+            'instructions_position': m.get('instructions_position') or 'prepend',
         }
 
     return {
@@ -97,6 +99,8 @@ def resolve_model(model_name):
         'backend': _auto_detect(model_name),
         'target_url': base_url,
         'api_key': base_key,
+        'custom_instructions': '',
+        'instructions_position': 'prepend',
     }
 
 

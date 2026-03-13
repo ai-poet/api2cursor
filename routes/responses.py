@@ -22,6 +22,9 @@ from routes.common import (
     build_openai_target,
     build_responses_target,
     build_route_context,
+    inject_instructions_anthropic,
+    inject_instructions_cc,
+    inject_instructions_responses,
     log_route_context,
     log_usage,
     responses_error_event,
@@ -73,6 +76,7 @@ def _build_cc_payload(payload: dict[str, Any], ctx: RouteContext) -> dict[str, A
     """
     cc_payload = responses_to_cc(payload)
     cc_payload['model'] = ctx.upstream_model
+    cc_payload = inject_instructions_cc(cc_payload, ctx.custom_instructions, ctx.instructions_position)
     _dbg(
         '已转换为聊天补全中间表示：字段=' + str(list(cc_payload.keys()))
         + f' 消息数={len(cc_payload.get("messages", []))}'
@@ -171,6 +175,7 @@ def _handle_responses_backend(ctx: RouteContext, payload: dict[str, Any]):
     """
     payload = dict(payload)
     payload['model'] = ctx.upstream_model
+    payload = inject_instructions_responses(payload, ctx.custom_instructions, ctx.instructions_position)
     url, headers = build_responses_target(ctx)
 
     if ctx.is_stream:
