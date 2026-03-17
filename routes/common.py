@@ -36,22 +36,36 @@ class RouteContext:
     instructions_position: str
     body_modifications: dict
     header_modifications: dict
+    passthrough_api_key: bool = False
 
 
 def build_route_context(client_model: str, is_stream: bool) -> RouteContext:
     """解析模型映射，得到当前请求的统一路由上下文。"""
+    from flask import request
+
     mapping = settings.resolve_model(client_model)
+    api_key = mapping['api_key']
+    passthrough = mapping.get('passthrough_api_key', False)
+
+    if passthrough:
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            api_key = auth[7:]
+        else:
+            api_key = request.headers.get('x-api-key', '')
+
     return RouteContext(
         client_model=client_model,
         upstream_model=mapping['upstream_model'],
         backend=mapping['backend'],
         target_url=mapping['target_url'],
-        api_key=mapping['api_key'],
+        api_key=api_key,
         is_stream=is_stream,
         custom_instructions=mapping.get('custom_instructions', ''),
         instructions_position=mapping.get('instructions_position', 'prepend'),
         body_modifications=mapping.get('body_modifications', {}),
         header_modifications=mapping.get('header_modifications', {}),
+        passthrough_api_key=passthrough,
     )
 
 

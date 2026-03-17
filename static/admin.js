@@ -169,6 +169,7 @@ async function loadMappings() {
         ? 'responses'
         : backend;
     const hasOverride = m.target_url || m.api_key;
+    const hasPassthrough = !!m.passthrough_api_key;
     const hasInstructions = !!m.custom_instructions;
     const hasBodyMods = m.body_modifications && Object.keys(m.body_modifications).length > 0;
     const hasHeaderMods = m.header_modifications && Object.keys(m.header_modifications).length > 0;
@@ -180,6 +181,7 @@ async function loadMappings() {
         <div class="mapping-meta">
           <span class="tag ${tagClass}">${tagLabel}</span>
           ${hasOverride ? '<span class="tag tag-override">自定义地址</span>' : ''}
+          ${hasPassthrough ? '<span class="tag tag-passthrough">透传</span>' : ''}
           ${hasInstructions ? '<span class="tag tag-instructions">自定义指令</span>' : ''}
           ${hasBodyMods ? '<span class="tag tag-mods">Body修改</span>' : ''}
           ${hasHeaderMods ? '<span class="tag tag-mods">Header修改</span>' : ''}
@@ -205,6 +207,7 @@ function openAddModal() {
   document.getElementById('mBackend').value = 'auto';
   document.getElementById('mUrl').value = '';
   document.getElementById('mKey').value = '';
+  document.getElementById('mPassthrough').checked = false;
   document.getElementById('mInstructions').value = '';
   document.getElementById('mInsPosition').value = 'prepend';
   document.getElementById('mBodyMods').value = '';
@@ -225,6 +228,7 @@ async function openEditModal(name) {
     document.getElementById('mBackend').value = m.backend || 'auto';
     document.getElementById('mUrl').value = m.target_url || '';
     document.getElementById('mKey').value = m.api_key || '';
+    document.getElementById('mPassthrough').checked = !!m.passthrough_api_key;
     document.getElementById('mInstructions').value = m.custom_instructions || '';
     document.getElementById('mInsPosition').value = m.instructions_position || 'prepend';
     document.getElementById('mBodyMods').value = m.body_modifications && Object.keys(m.body_modifications).length ? JSON.stringify(m.body_modifications, null, 2) : '';
@@ -266,6 +270,7 @@ async function saveMapping() {
     backend: document.getElementById('mBackend').value,
     target_url: document.getElementById('mUrl').value.trim(),
     api_key: document.getElementById('mKey').value.trim(),
+    passthrough_api_key: document.getElementById('mPassthrough').checked,
     custom_instructions: document.getElementById('mInstructions').value,
     instructions_position: document.getElementById('mInsPosition').value,
     body_modifications: bodyMods,

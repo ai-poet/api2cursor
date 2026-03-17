@@ -140,6 +140,7 @@ def add_mapping():
         'instructions_position': data.get('instructions_position', 'prepend'),
         'body_modifications': data.get('body_modifications') or {},
         'header_modifications': data.get('header_modifications') or {},
+        'passthrough_api_key': data.get('passthrough_api_key', False),
     }
     return _save_and_respond(s, f'映射已添加: {name}')
 
@@ -166,6 +167,7 @@ def update_mapping(name):
         'instructions_position': data.get('instructions_position', 'prepend'),
         'body_modifications': data.get('body_modifications') or {},
         'header_modifications': data.get('header_modifications') or {},
+        'passthrough_api_key': data.get('passthrough_api_key', False),
     }
     if new_name != name:
         del mappings[name]

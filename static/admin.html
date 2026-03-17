@@ -138,6 +138,13 @@
       </div>
     </div>
     <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
+        <input type="checkbox" id="mPassthrough" style="width:18px;height:18px">
+        透传客户端 API Key
+      </label>
+      <div class="hint">启用后，将直接使用用户请求中携带的 API Key 向上游鉴权，而不使用上方配置的密钥。适用于多用户共享场景。</div>
+    </div>
+    <div class="field">
       <label>自定义指令 <span style="color:var(--muted)">（可选）</span></label>
       <div class="input-wrap"><textarea id="mInstructions" rows="5" placeholder="注入到请求中的自定义系统指令&#10;&#10;Responses 格式 → 写入 instructions 字段（developer 级别）&#10;Chat Completions 格式 → 注入为首条 system 消息&#10;Anthropic 格式 → 写入 system 字段" style="resize:vertical;min-height:80px"></textarea></div>
       <div class="hint">
